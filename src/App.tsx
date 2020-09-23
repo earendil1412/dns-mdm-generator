@@ -3,21 +3,17 @@ import './App.css';
 import * as uuid from 'uuid'
 import {Button, FormControlLabel, Input, Radio, RadioGroup} from "@material-ui/core";
 
-enum Option {
-    TLS,
-    HTTPS
-}
-
 type DNS = {
-    option: Option,
+    option: string,
     ips: string[],
-    name: string
+    profileName: string,
+    serverName: string
 }
 
 class App extends Component<{}, DNS> {
     constructor(props: {}) {
         super(props);
-        this.state = {ips: [""], name: "", option: Option.TLS}
+        this.state = {ips: [""], profileName: "", option: "TLS", serverName: ""}
     }
 
     render() {
@@ -26,54 +22,53 @@ class App extends Component<{}, DNS> {
                 <h1>
                     Encrypt DNS MDM Generator
                 </h1>
-                name:
-                <Input type="text" value={this.state.name} onChange={(event) => {
-                    this.setState({name: event.target.value})
+                Profile Name:
+                <Input type="text" value={this.state.profileName} onChange={(event) => {
+                    this.setState({profileName: event.target.value})
                 }}/>
-                server:
+                {this.state.option === "TLS" ? "Server Name:" : "Server URL"}
+                <Input type="text" value={this.state.serverName} onChange={(event) => {
+                    this.setState({serverName: event.target.value})
+                }}/>
+                <br/>
+                IP List:<br/>
                 {
                     this.state.ips.map((value: string, index: number) => {
-                        if (index !== this.state.ips.length - 1) {
-                            return (
+                        return ([
                                 <Input type="text" key={index} value={this.state.ips[index]} onChange={(event) => {
                                     let temp = this.state.ips
                                     temp[index] = event.target.value
                                     this.setState({ips: temp})
-                                }}/>
-                            )
-                        } else {
-                            return ([
-                                    <Input type="text" key={index} value={this.state.ips[index]} onChange={(event) => {
-                                        let temp = this.state.ips
-                                        temp[index] = event.target.value
-                                        this.setState({ips: temp})
-                                    }}/>,
-                                    <Button onClick={() => {
-                                        if (this.state.ips.length === 1) {
-                                            return
-                                        }
-                                        let temp = this.state.ips
-                                        temp.splice(temp.length - 1, 1)
-                                        this.setState({ips: temp})
-                                    }}>-</Button>,
-                                    <Button onClick={() => {
-                                        let temp = this.state.ips
-                                        temp.push("")
-                                        this.setState({ips: temp})
-                                    }}>+</Button>
-                                ]
-                            )
-                        }
+                                }}/>,
+                                <Button style={{display: this.state.ips.length === 1 ? "none" : ""}} onClick={() => {
+                                    if (this.state.ips.length === 1) {
+                                        return
+                                    }
+                                    let temp = this.state.ips
+                                    temp.splice(index, 1)
+                                    this.setState({ips: temp})
+                                }}>-</Button>,
+                                <Button style={{display: this.state.ips.length === index + 1 ? "" : "none"}}
+                                        onClick={() => {
+                                            let temp = this.state.ips
+                                            temp.push("")
+                                            this.setState({ips: temp})
+                                        }}>+</Button>,
+                                <br/>
+                            ]
+                        )
                     })
                 }
-                <RadioGroup row onChange={(_, value: string) => {
-                    this.setState({option: Option[value as keyof typeof Option]})
+                <RadioGroup value={this.state.option} row onChange={(_, value: string) => {
+                    this.setState({option: value})
                 }}>
-                    <FormControlLabel value={Option[Option.TLS]} control={<Radio/>} label={Option[Option.TLS]}/>
-                    <FormControlLabel value={Option[Option.HTTPS]} control={<Radio/>} label={Option[Option.HTTPS]}/>
+                    <FormControlLabel value="TLS" control={<Radio/>} label="TLS"/>
+                    <FormControlLabel value="HTTPS" control={<Radio/>} label="HTTPS"/>
                 </RadioGroup>
                 <Button
-                    onClick={() => download("test.xml", renderXML(this.state.option, this.state.ips, this.state.name))}>Download
+                    onClick={
+                        () => download("encrypted-dns.mobileconfig", renderXML(this.state.option, this.state.ips, this.state.profileName, this.state.serverName))
+                    }>Download
                 </Button>
             </div>
         );
@@ -81,7 +76,7 @@ class App extends Component<{}, DNS> {
 }
 
 function download(filename: string, text: string) {
-    var element = document.createElement('a');
+    let element = document.createElement('a');
     element.setAttribute('href', 'data:xml/plain;charset=utf-8,' + encodeURIComponent(text));
     element.setAttribute('download', filename);
     element.style.display = 'none';
@@ -90,7 +85,7 @@ function download(filename: string, text: string) {
     document.body.removeChild(element);
 }
 
-const renderXML = (option: Option, ips: string[], name: string) => {
+const renderXML = (option: string, ips: string[], profileName: string, serverURL: string) => {
     return `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -106,13 +101,13 @@ const renderXML = (option: Option, ips: string[], name: string) => {
                     <array>
                         ${ips.map(x => `<string>${x}</string>`).join("\n                        ")}
                     </array>
-                    <key>${option === Option.TLS ? "ServerName" : "ServerURL"}</key>
-                    <string>dns.google</string>
+                    <key>${option === "TLS" ? "ServerName" : "ServerURL"}</key>
+                    <string>${serverURL}</string>
                 </dict>
                 <key>PayloadDescription</key>
                 <string>Configures device to use encrypted DNS</string>
                 <key>PayloadDisplayName</key>
-                <string>${name}</string>
+                <string>${profileName}</string>
                 <key>PayloadIdentifier</key>
                 <string>com.apple.dnsSettings.managed.${uuid.v4()}</string>
                 <key>PayloadType</key>
@@ -128,7 +123,7 @@ const renderXML = (option: Option, ips: string[], name: string) => {
         <key>PayloadDescription</key>
         <string>Adds the encrypted DNS to Big Sur and iOS 14 based systems</string>
         <key>PayloadDisplayName</key>
-        <string>${name}</string>
+        <string>${profileName}</string>
         <key>PayloadIdentifier</key>
         <string>com.github.earendil1412.dns-mdm-generator</string>
         <key>PayloadRemovalDisallowed</key>
