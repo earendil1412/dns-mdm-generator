@@ -1,7 +1,7 @@
 import React, {Component} from 'react';
 import './App.css';
 import * as uuid from 'uuid'
-import {Button, FormControlLabel, Input, Radio, RadioGroup} from "@material-ui/core";
+import {Button, FormControlLabel, Radio, RadioGroup, TextField} from "@material-ui/core";
 
 type DNS = {
     option: string,
@@ -23,11 +23,12 @@ class App extends Component<{}, DNS> {
                     Encrypt DNS MDM Generator
                 </h1>
                 Profile Name:
-                <Input type="text" value={this.state.profileName} onChange={(event) => {
+                <TextField multiline={true} size="small" value={this.state.profileName} onChange={(event) => {
                     this.setState({profileName: event.target.value})
                 }}/>
+                <br/>
                 {this.state.option === "TLS" ? "Server Name:" : "Server URL"}
-                <Input type="text" value={this.state.serverName} onChange={(event) => {
+                <TextField multiline={true} size="small" value={this.state.serverName} onChange={(event) => {
                     this.setState({serverName: event.target.value})
                 }}/>
                 <br/>
@@ -35,7 +36,7 @@ class App extends Component<{}, DNS> {
                 {
                     this.state.ips.map((value: string, index: number) => {
                         return ([
-                                <Input type="text" key={index} value={this.state.ips[index]} onChange={(event) => {
+                                <TextField multiline={true} size="small" key={index} value={this.state.ips[index]} onChange={(event) => {
                                     let temp = this.state.ips
                                     temp[index] = event.target.value
                                     this.setState({ips: temp})
