@@ -2,13 +2,16 @@ import React, {Component} from 'react';
 import './App.css';
 import * as uuid from 'uuid'
 import {Button, FormControlLabel, Radio, RadioGroup, TextField} from "@material-ui/core";
+import ServerUrl from "./ServerUrl";
+import IpList from "./IpList";
 
 type DNS = {
-    option: string,
+    option: "TLS" | "HTTPS",
     ips: string[],
     profileName: string,
     serverName: string
 }
+const ipRegex = require('ip-regex');
 
 class App extends Component<{}, DNS> {
     constructor(props: {}) {
@@ -16,60 +19,59 @@ class App extends Component<{}, DNS> {
         this.state = {ips: [""], profileName: "", option: "TLS", serverName: ""}
     }
 
+    setUrl = (value: string) => this.setState({serverName: value})
+
+    addIp = () => {
+        let temp = this.state.ips
+        temp.push("")
+        this.setState({ips: temp})
+    }
+
+    removeIp = (index: number) => {
+        if (this.state.ips.length === 1) {
+            return
+        }
+        let temp = this.state.ips
+        temp.splice(index, 1)
+        this.setState({ips: temp})
+    }
+
+    setIp = (index: number, ip: string) => {
+        let temp = this.state.ips
+        temp[index] = ip
+        this.setState({ips: temp})
+    }
+
     render() {
         return (
             <div>
                 <h1>
-                    Encrypt DNS MDM Generator
+                    Encrypted DNS MDM Generator
                 </h1>
                 Profile Name:
-                <TextField multiline={true} size="small" value={this.state.profileName} onChange={(event) => {
-                    this.setState({profileName: event.target.value})
-                }}/>
+                <TextField multiline={true} size="small" value={this.state.profileName}
+                           onChange={(event) => {
+                               this.setState({profileName: event.target.value})
+                           }}/>
                 <br/>
                 {this.state.option === "TLS" ? "Server Name:" : "Server URL:"}
-                <TextField multiline={true} size="small" value={this.state.serverName} onChange={(event) => {
-                    this.setState({serverName: event.target.value})
-                }}/>
+                <ServerUrl option={this.state.option} setUrl={this.setUrl}/>
                 <br/>
                 IP List:<br/>
-                {
-                    this.state.ips.map((value: string, index: number) => {
-                        return ([
-                                <TextField multiline={true} size="small" key={index} value={this.state.ips[index]} onChange={(event) => {
-                                    let temp = this.state.ips
-                                    temp[index] = event.target.value
-                                    this.setState({ips: temp})
-                                }}/>,
-                                <Button style={{display: this.state.ips.length === 1 ? "none" : ""}} onClick={() => {
-                                    if (this.state.ips.length === 1) {
-                                        return
-                                    }
-                                    let temp = this.state.ips
-                                    temp.splice(index, 1)
-                                    this.setState({ips: temp})
-                                }}>-</Button>,
-                                <Button style={{display: this.state.ips.length === index + 1 ? "" : "none"}}
-                                        onClick={() => {
-                                            let temp = this.state.ips
-                                            temp.push("")
-                                            this.setState({ips: temp})
-                                        }}>+</Button>,
-                                <br/>
-                            ]
-                        )
-                    })
-                }
+                <IpList addIp={this.addIp} removeIp={this.removeIp} setIp={this.setIp} ipList={this.state.ips}/>
                 <RadioGroup value={this.state.option} row onChange={(_, value: string) => {
-                    this.setState({option: value})
+                    this.setState({option: value as "TLS" | "HTTPS"})
                 }}>
                     <FormControlLabel value="TLS" control={<Radio/>} label="TLS"/>
                     <FormControlLabel value="HTTPS" control={<Radio/>} label="HTTPS"/>
                 </RadioGroup>
-                <Button
-                    onClick={
-                        () => download("encrypted-dns.mobileconfig", renderXML(this.state.option, this.state.ips, this.state.profileName, this.state.serverName))
-                    }>Download
+                <Button variant="contained" disableElevation disabled={
+                    this.state.ips.filter(value => !ipRegex({exact: true}).test(value)).length !== 0
+                    || this.state.serverName === "" || this.state.profileName === ""
+                }
+                        onClick={
+                            () => download("encrypted-dns.mobileconfig", renderXML(this.state.option, this.state.ips, this.state.profileName, this.state.serverName))
+                        }>Download
                 </Button>
             </div>
         );
@@ -86,7 +88,7 @@ function download(filename: string, text: string) {
     document.body.removeChild(element);
 }
 
-const renderXML = (option: string, ips: string[], profileName: string, serverURL: string) => {
+const renderXML = (option: "TLS" | "HTTPS", ips: string[], profileName: string, serverURL: string) => {
     return `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -100,10 +102,10 @@ const renderXML = (option: string, ips: string[], profileName: string, serverURL
                     <string>${option}</string>
                     <key>ServerAddresses</key>
                     <array>
-                        ${ips.map(x => `<string>${x}</string>`).join("\n                        ")}
+                        ${ips.map(ip => `<string>${ip}</string>`).join("\n                        ")}
                     </array>
                     <key>${option === "TLS" ? "ServerName" : "ServerURL"}</key>
-                    <string>${serverURL}</string>
+                    <string>${option === "TLS" ? serverURL : "https://" + serverURL + "/dns-query"}</string>
                 </dict>
                 <key>PayloadDescription</key>
                 <string>Configures device to use encrypted DNS</string>
