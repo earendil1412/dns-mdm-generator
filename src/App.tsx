@@ -27,7 +27,7 @@ class App extends Component<{}, DNS> {
                     this.setState({profileName: event.target.value})
                 }}/>
                 <br/>
-                {this.state.option === "TLS" ? "Server Name:" : "Server URL"}
+                {this.state.option === "TLS" ? "Server Name:" : "Server URL:"}
                 <TextField multiline={true} size="small" value={this.state.serverName} onChange={(event) => {
                     this.setState({serverName: event.target.value})
                 }}/>
