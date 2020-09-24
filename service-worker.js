@@ -14,7 +14,7 @@
 importScripts("https://storage.googleapis.com/workbox-cdn/releases/4.3.1/workbox-sw.js");
 
 importScripts(
-  "/dns-mdm-generator/precache-manifest.e148eb9f6874449e3f3e407b1347ae80.js"
+  "/dns-mdm-generator/precache-manifest.50bf52291b884883cec8c1ff8b8e4d34.js"
 );
 
 self.addEventListener('message', (event) => {
